@@ -34,7 +34,6 @@ async function run() {
             const result = pf(issue)
             if (result.hit) {
                 triggered.add(n)
-                if (result.break) break
                 if (typeof result.problem === 'string') {
                     problems.add(result.problem)
                 } else if (Array.isArray(result.problem) && result.problem.length > 0) {
@@ -51,6 +50,7 @@ async function run() {
                         want_tag.add(t)
                     }
                 }
+                if (result.break) break
             }
         }
 
