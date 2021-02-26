@@ -1,13 +1,25 @@
-name: 'Wait'
-description: 'Wait a designated number of milliseconds'
+name: 'go-cqhttp issue prefilter'
+description: 'Prefilter issues based on a few conditions'
 inputs:
-  milliseconds:  # id of input
-    description: 'number of milliseconds to wait'
+  repository:
+    description: 'Repository name with owner. For example, actions/checkout'
     required: true
-    default: '1000'
+    default: ${{ github.repository }}
+  token: 
+    description: 'GitHub PAT used to make changes to issue'
+    required: true
+    default: ${{ github.token }}
+  issue_number:
+    description: 'The number of issue this action is handling'
+    required: true
+    default: ${{ github.event.issue.number }}
+  guide_link:
+    description: 'The link to guide'
+    required: false
+    default: 'https://github.com/Mrs4s/go-cqhttp/issues/633'
 outputs:
-  time: # output will be available to future steps
-    description: 'The message to output'
+  prefilter_triggered: 
+    description: 'Output the name prefilter triggered.'
 runs:
   using: 'node12'
   main: 'dist/index.js'
