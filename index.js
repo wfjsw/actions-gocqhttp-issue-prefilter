@@ -4,6 +4,7 @@ const util = require('util')
 
 const prefilters = {
     'move-feature-request': require('./prefilters/move-featurerequest'),
+    'check-checkbox': require('./prefilters/check-checkbox'),
     'check-frontmatter': require('./prefilters/check-requiredfields'),
 }
 

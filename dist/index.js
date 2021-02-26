@@ -11,6 +11,7 @@ const util = __nccwpck_require__(669)
 
 const prefilters = {
     'move-feature-request': __nccwpck_require__(2),
+    'check-checkbox': __nccwpck_require__(271),
     'check-frontmatter': __nccwpck_require__(909),
 }
 
@@ -39,7 +40,7 @@ async function run() {
         for (const [n, pf] of Object.entries(prefilters)) {
             const result = pf(issue)
             if (result.hit) {
-                triggered.push(n)
+                triggered.add(n)
                 if (result.break) break
                 if (result.problem) problems.add(result.problem)
                 if (result.want_close) want_close = true
@@ -53,11 +54,11 @@ async function run() {
             }
         }
 
-        if (triggered.length > 0) {
+        if (triggered.size() > 0) {
 
-            if (problems.length > 0) {
+            if (problems.size() > 0) {
                 const guide_link = core.getInput('guide_link')
-                const body = `我们在您的 Issue 中发现了如下问题：\n\n${problems.map(n => `- ${n}`).join('\n')}\n\n${want_close ? '因此您的 Issue 已被关闭。请修复上述问题后重新创建新 Issue。' : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
+                const body = `我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? '因此您的 Issue 已被关闭。请修复上述问题后重新创建新 Issue。' : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
                 await octokit.issues.createComment({
                     owner,
                     repo,
@@ -66,10 +67,10 @@ async function run() {
                 })
             }
 
-            if (want_tag.length > 0) {
+            if (want_tag.size() > 0) {
                 await octokit.issues.addLabels({
                     owner, repo, issue_number,
-                    labels: want_tag
+                    labels: [...want_tag]
                 })
             }
 
@@ -80,7 +81,7 @@ async function run() {
                 })
             }
 
-            core.setOutput('prefilter_triggered', triggered.join('\n'))
+            core.setOutput('prefilter_triggered', [...triggered].join('\n'))
         }
 
     } catch (error) {
@@ -5928,6 +5929,55 @@ function wrappy (fn, cb) {
     }
     return ret
   }
+}
+
+
+/***/ }),
+
+/***/ 271:
+/***/ ((module) => {
+
+const checkboxes = [
+    /^- \[(\s|x)\] 我已经阅读"提问前需知 \[图\+文\]": `Mrs4s\/go-cqhttp\/issues\/633`$/,
+]
+
+const PROBLEM = {
+    missing: '无法检测到某些确认教程已阅的候选框。请重新创建 Issue 并确保您没有删除或修改这些确认框。',
+    not_ticked: '检测到您没有勾选部分确认教程已阅的候选框。请重新创建 Issue、仔细阅读教程并遵守相关发帖格式。'
+}
+
+module.exports = function checkCheckbox(issue) {
+    const body = issue.body
+    let missing = false, not_ticked = false
+    for (const cb of checkboxes) {
+        const matches = cb.exec(body)
+        if (matches !== null) {
+            const ticked = matches[1]
+            if (ticked !== 'x') {
+                not_ticked = true
+            } 
+        } else {
+            missing = true
+        }
+    }
+    if (missing || not_ticked) {
+        let problem = []
+        if (missing) problem.push(PROBLEM.missing)
+        if (not_ticked) problem.push(PROBLEM.not_ticked)
+        return {
+            hit: true,
+            break: false,
+            want_close: true,
+            want_not_close: false,
+            problem,
+            want_tag: ['invalid']
+        }
+    } else {
+        return {
+            hit: false
+        }
+    }
+
 }
 
 
