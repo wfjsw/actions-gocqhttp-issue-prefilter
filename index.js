@@ -32,7 +32,7 @@ async function run() {
         for (const [n, pf] of Object.entries(prefilters)) {
             const result = pf(issue)
             if (result.hit) {
-                triggered.push(n)
+                triggered.add(n)
                 if (result.break) break
                 if (result.problem) problems.add(result.problem)
                 if (result.want_close) want_close = true
@@ -46,11 +46,11 @@ async function run() {
             }
         }
 
-        if (triggered.length > 0) {
+        if (triggered.size() > 0) {
 
-            if (problems.length > 0) {
+            if (problems.size() > 0) {
                 const guide_link = core.getInput('guide_link')
-                const body = `我们在您的 Issue 中发现了如下问题：\n\n${problems.map(n => `- ${n}`).join('\n')}\n\n${want_close ? '因此您的 Issue 已被关闭。请修复上述问题后重新创建新 Issue。' : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
+                const body = `我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? '因此您的 Issue 已被关闭。请修复上述问题后重新创建新 Issue。' : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
                 await octokit.issues.createComment({
                     owner,
                     repo,
@@ -59,10 +59,10 @@ async function run() {
                 })
             }
 
-            if (want_tag.length > 0) {
+            if (want_tag.size() > 0) {
                 await octokit.issues.addLabels({
                     owner, repo, issue_number,
-                    labels: want_tag
+                    labels: [...want_tag]
                 })
             }
 
@@ -73,7 +73,7 @@ async function run() {
                 })
             }
 
-            core.setOutput('prefilter_triggered', triggered.join('\n'))
+            core.setOutput('prefilter_triggered', [...triggered].join('\n'))
         }
 
     } catch (error) {
