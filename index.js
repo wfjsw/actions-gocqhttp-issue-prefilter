@@ -58,7 +58,7 @@ async function run() {
 
             if (problems.size > 0) {
                 const guide_link = core.getInput('guide_link')
-                const body = `我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? '因此您的 Issue 已被关闭。请修复上述问题后重新创建新 Issue。' : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
+                const body = `我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? `因此您的 Issue 已被关闭。请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}修复上述问题后重新创建新 Issue。` : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
                 await octokit.issues.createComment({
                     owner,
                     repo,

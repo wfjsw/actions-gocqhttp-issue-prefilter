@@ -65,7 +65,7 @@ async function run() {
 
             if (problems.size > 0) {
                 const guide_link = core.getInput('guide_link')
-                const body = `我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? '因此您的 Issue 已被关闭。请修复上述问题后重新创建新 Issue。' : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
+                const body = `我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? `因此您的 Issue 已被关闭。请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}修复上述问题后重新创建新 Issue。` : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
                 await octokit.issues.createComment({
                     owner,
                     repo,
@@ -5945,7 +5945,7 @@ function wrappy (fn, cb) {
 /***/ ((module) => {
 
 const checkboxes = [
-    /^- \[(\s|x)\] 我已经阅读"提问前需知 \[图\+文\]": `Mrs4s\/go-cqhttp\/issues\/633`$/,
+    /^- \[(\s|x)\] 我已经阅读"提问前需知 \[图\+文\]": `Mrs4s\/go-cqhttp\/issues\/633`$/m,
 ]
 
 const PROBLEM = {
@@ -5996,17 +5996,17 @@ module.exports = function checkCheckbox(issue) {
 const filters = [
     {
         expressions: [
-            /^go-cqhttp版本:\s?.{2,}$/,
-            /^运行环境:\s?.{2,}/,
-            /^连接方式:\s?.{2,}/,
-            /^使用协议:\s?.{2,}/,
+            /^go-cqhttp版本:\s?.{2,}$/m,
+            /^运行环境:\s?.{2,}/m,
+            /^连接方式:\s?.{2,}/m,
+            /^使用协议:\s?.{2,}/m,
         ],
         required: true,
         description: '您的问题中缺少必要的环境信息。环境信息对于 Bug 调试非常重要，缺少这些信息将极大提高调试难度。请重新创建 Issue 并包含所有必需的环境信息。'
     },
     {
         expressions: [
-            /^\*\*复现方法\*\*$/
+            /^\*\*复现方法\*\*$/m
         ],
         required: false,
         description: '没有在问题描述中找到对应复现方法。清晰明了的复现方法有助于快速定位问题。请尝试复现并补全复现方法。'

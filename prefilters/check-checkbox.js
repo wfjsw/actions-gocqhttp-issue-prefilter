@@ -1,5 +1,5 @@
 const checkboxes = [
-    /^- \[(\s|x)\] 我已经阅读"提问前需知 \[图\+文\]": `Mrs4s\/go-cqhttp\/issues\/633`$/,
+    /^- \[(\s|x)\] 我已经阅读"提问前需知 \[图\+文\]": `Mrs4s\/go-cqhttp\/issues\/633`$/m,
 ]
 
 const PROBLEM = {
