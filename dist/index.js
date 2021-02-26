@@ -42,10 +42,17 @@ async function run() {
             if (result.hit) {
                 triggered.add(n)
                 if (result.break) break
-                if (result.problem) problems.add(result.problem)
+                if (typeof result.problem === 'string') {
+                    problems.add(result.problem)
+                } else if (Array.isArray(result.problem) && result.problem.length > 0) {
+                    for (const p of result.problem) {
+                        problems.add(p)
+                    }
+                }
                 if (result.want_close) want_close = true
                 if (result.want_not_close) want_close = false
-                if (typeof result.want_tag === 'string') want_tag.add(result.want_tag)
+                if (typeof result.want_tag === 'string') { 
+                    want_tag.add(result.want_tag) }
                 else if (Array.isArray(result.want_tag) && result.want_tag.length > 0) {
                     for (const t of result.want_tag) {
                         want_tag.add(t)
