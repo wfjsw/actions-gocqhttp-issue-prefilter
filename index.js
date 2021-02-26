@@ -11,7 +11,7 @@ const prefilters = {
 async function run() {
     try {
         const token = core.getInput('token')
-        const [owner, repo] = core.getInput('repo').split('/')
+        const [owner, repo] = core.getInput('repository').split('/')
         const issue_number = core.getInput('issue_number')
         const octokit = github.getOctokit(token)
 
