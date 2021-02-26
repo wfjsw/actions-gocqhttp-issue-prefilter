@@ -84,6 +84,7 @@ async function run() {
         }
 
     } catch (error) {
+        core.error(error.stack)
         core.setFailed(error.message)
     }
 }
