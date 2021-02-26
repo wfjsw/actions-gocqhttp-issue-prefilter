@@ -40,7 +40,6 @@ module.exports = function checkRequiredFields(issue) {
             break: false,
             problem,
             want_close: required,
-            want_not_close: false,
             want_tag: 'invalid'
         }
     } else {

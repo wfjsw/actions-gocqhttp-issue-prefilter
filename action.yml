@@ -17,6 +17,10 @@ inputs:
     description: 'The link to guide'
     required: false
     default: 'https://github.com/Mrs4s/go-cqhttp/issues/633'
+  discussion_link_for_feature_request:
+    description: 'Discussion link for feature request'
+    required: false
+    default: 'https://github.com/Mrs4s/go-cqhttp/discussions/categories/ideas'
 outputs:
   prefilter_triggered: 
     description: 'Output the name prefilter triggered.'

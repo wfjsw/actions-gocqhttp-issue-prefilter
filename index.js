@@ -29,7 +29,7 @@ async function run() {
             return
         }
 
-        let want_close = false, want_tag = new Set(), problems = new Set(), triggered = new Set()
+        let want_close = false, want_lock = false, want_tag = new Set(), problems = new Set(), triggered = new Set()
         for (const [n, pf] of Object.entries(prefilters)) {
             const result = pf(issue)
             if (result.hit) {
@@ -43,6 +43,8 @@ async function run() {
                 }
                 if (result.want_close) want_close = true
                 if (result.want_not_close) want_close = false
+                if (result.want_lock) want_lock = true
+                if (result.want_not_lock) want_lock = false
                 if (typeof result.want_tag === 'string') { 
                     want_tag.add(result.want_tag) }
                 else if (Array.isArray(result.want_tag) && result.want_tag.length > 0) {
@@ -58,12 +60,9 @@ async function run() {
 
             if (problems.size > 0) {
                 const guide_link = core.getInput('guide_link')
-                const body = `我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? `因此您的 Issue 已被关闭。请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}修复上述问题后重新创建新 Issue。` : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
+                const body = `我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? `因此您的 Issue 已被关闭${want_lock?'并锁定':''}。请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}修复上述问题后重新创建新 Issue。` : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
                 await octokit.issues.createComment({
-                    owner,
-                    repo,
-                    issue_number,
-                    body
+                    owner, repo, issue_number, body
                 })
             }
 
@@ -78,6 +77,13 @@ async function run() {
                 await octokit.issues.update({
                     owner, repo, issue_number,
                     state: 'closed'
+                })
+            }
+
+            if (want_lock) {
+                await octokit.issues.lock({
+                    owner, repo, issue_number,
+                    lock_reason: 'off-topic'
                 })
             }
 

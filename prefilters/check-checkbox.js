@@ -29,7 +29,6 @@ module.exports = function checkCheckbox(issue) {
             hit: true,
             break: false,
             want_close: true,
-            want_not_close: false,
             problem,
             want_tag: ['invalid']
         }
