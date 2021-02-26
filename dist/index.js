@@ -5996,13 +5996,13 @@ module.exports = function checkCheckbox(issue) {
 const filters = [
     {
         expressions: [
-            /^go-cqhttp版本:/,
-            /^运行环境:/,
-            /^连接方式:/,
-            /^使用协议:/,
+            /^go-cqhttp版本:\s?.{2,}$/,
+            /^运行环境:\s?.{2,}/,
+            /^连接方式:\s?.{2,}/,
+            /^使用协议:\s?.{2,}/,
         ],
         required: true,
-        description: '无法检测到您的环境信息。环境信息对于 Bug 调试非常重要，缺少这些信息将极大提高调试难度。请重新创建 Issue 并包含所有必需的环境信息。'
+        description: '您的问题中缺少必要的环境信息。环境信息对于 Bug 调试非常重要，缺少这些信息将极大提高调试难度。请重新创建 Issue 并包含所有必需的环境信息。'
     },
     {
         expressions: [
