@@ -6,6 +6,7 @@ const keywords = [
     /新功能/,
     /建议/,
     /提议/,
+    /希望/,
     /能否支持/,
     /可否支持/,
 ]
@@ -21,7 +22,7 @@ module.exports = function moveFeatureRequest(issue) {
                 problem: `这是一个新功能需求，请在 [对应版块](${link}) 提出。此处仅处理程序运行中出现的问题。`,
                 want_close: true,
                 want_lock: true,
-                want_tag: 'feature request'
+                want_tag: 'enhancement'
             }
         }
     } 

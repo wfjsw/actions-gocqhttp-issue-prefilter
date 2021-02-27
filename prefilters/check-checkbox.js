@@ -30,7 +30,6 @@ module.exports = function checkCheckbox(issue) {
             break: false,
             want_close: true,
             problem,
-            want_tag: ['invalid']
         }
     } else {
         return {
