@@ -11,7 +11,7 @@ const filters = [
     },
     {
         expressions: [
-            /\*\*复现方法\*\*\r?\n?.{10,}?(?:\r\n\*\*)?/ // at least 10 char after this field
+            /\*\*复现方法\*\*\r?\n?[\s\S]{10,}?(?:\r\n\*\*)?/ // at least 10 char after this field
         ],
         required: false,
         description: '没有在问题描述中找到对应复现方法。清晰明了的复现方法有助于快速定位问题。请尝试复现并补全复现方法。'
