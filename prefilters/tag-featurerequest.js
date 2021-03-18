@@ -18,7 +18,7 @@ module.exports = function moveFeatureRequest(issue) {
             const link = core.getInput('discussion_link_for_feature_request')
             return {
                 hit: true,
-                break: true,
+                bail: true,
                 problem: `这是一个新功能需求，请在 [对应版块](${link}) 提出。此处仅处理程序运行中出现的问题。`,
                 want_close: true,
                 want_lock: true,

@@ -37,7 +37,7 @@ module.exports = function checkRequiredFields(issue) {
         }
         return {
             hit: true,
-            break: false,
+            bail: false,
             problem,
             want_close: required,
             want_tag: 'need more info'

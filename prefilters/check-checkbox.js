@@ -31,9 +31,9 @@ module.exports = function checkCheckbox(issue) {
         if (not_ticked) problem.push(PROBLEM.not_ticked)
         return {
             hit: true,
-            break: false,
+            bail: false,
             want_close: true,
-            want_lock: true,
+            want_lock: false,
             problem,
         }
     } else {

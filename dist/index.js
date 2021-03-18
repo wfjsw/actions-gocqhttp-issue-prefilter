@@ -10,7 +10,8 @@ const github = __nccwpck_require__(438)
 const util = __nccwpck_require__(669)
 
 const prefilters = {
-    'move-feature-request': __nccwpck_require__(2),
+    // 'tag-feature-request': require('./prefilters/tag-featurerequest'),
+    'bail-featurerequest': __nccwpck_require__(796),
     'check-checkbox': __nccwpck_require__(271),
     'check-frontmatter': __nccwpck_require__(909),
 }
@@ -21,6 +22,7 @@ async function run() {
         const token = core.getInput('token')
         const [owner, repo] = core.getInput('repository').split('/')
         const issue_number = core.getInput('issue_number')
+        const event = core.getInput('event')
         const octokit = github.getOctokit(token)
 
         core.debug(util.inspect({ token, repo, issue_number }))
@@ -34,6 +36,30 @@ async function run() {
         if ('pull_request' in issue) {
             core.info('This issue is a Pull Request. Skipping...')
             return
+        }
+
+        let is_recheck = false, old_comment_id = 0
+
+        if (event === 'edited') {
+            if (!Array.isArray(issue.labels)) return
+            if (issue.labels.some(n => n.name === 'Issuebot: Pending Recheck')) {
+                is_recheck = true
+            } else {
+                return
+            }
+        }
+
+        if (is_recheck) {
+            const { data: comments } = await octokit.issues.listComments({
+                owner, repo, issue_number,
+                page: 1,
+                per_page: 10,
+                sort: 'created',
+                direction: 'asc'
+            })
+
+            const old_comment = comments.find(n => n.body.startsWith('<!-- Issuebot Comment -->'))
+            if (old_comment) old_comment_id = old_comment.id
         }
 
         let want_close = false, want_lock = false, want_tag = new Set(), problems = new Set(), triggered = new Set()
@@ -52,14 +78,15 @@ async function run() {
                 if (result.want_not_close) want_close = false
                 if (result.want_lock) want_lock = true
                 if (result.want_not_lock) want_lock = false
-                if (typeof result.want_tag === 'string') { 
-                    want_tag.add(result.want_tag) }
+                if (typeof result.want_tag === 'string') {
+                    want_tag.add(result.want_tag)
+                }
                 else if (Array.isArray(result.want_tag) && result.want_tag.length > 0) {
                     for (const t of result.want_tag) {
                         want_tag.add(t)
                     }
                 }
-                if (result.break) break
+                if (result.bail) break
             }
         }
 
@@ -67,10 +94,18 @@ async function run() {
 
             if (problems.size > 0) {
                 const guide_link = core.getInput('guide_link')
-                const body = `我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? `因此您的 Issue 已被关闭${want_lock?'并锁定':''}。请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}修复上述问题后重新创建新 Issue。` : `请${guide_link ? `参照 [相关教程](${guide_link}) `:'自行'}按照上述要求对 Issue 进行修改。`}`
-                await octokit.issues.createComment({
-                    owner, repo, issue_number, body
-                })
+                const body = `<!-- Issuebot Comment --> 我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? `因此您的 Issue 已被关闭${want_lock ? '并锁定' : ''}。请${guide_link ? `参照 [相关教程](${guide_link}) ` : '自行'}${want_lock ? '修复上述问题后重新创建新 Issue。' : '按照上述要求对 Issue 进行修改。'}` : `请${guide_link ? `参照 [相关教程](${guide_link}) ` : '自行'}按照上述要求对 Issue 进行修改。`}`
+                if (old_comment_id === 0) {
+                    await octokit.issues.createComment({
+                        owner, repo, issue_number, body
+                    })
+                } else {
+                    await octokit.issues.updateComment({
+                        owner, repo, issue_number,
+                        comment_id: old_comment_id,
+                        body
+                    })
+                }
             }
 
             if (want_tag.size > 0) {
@@ -80,21 +115,67 @@ async function run() {
                 })
             }
 
-            if (want_close) {
+            if (want_close && issue.state === 'open') {
                 await octokit.issues.update({
                     owner, repo, issue_number,
                     state: 'closed'
                 })
             }
 
-            if (want_lock) {
+            if (want_lock && !issue.locked) {
                 await octokit.issues.lock({
                     owner, repo, issue_number,
                     lock_reason: 'off-topic'
                 })
             }
 
+            if (want_close && !want_lock && !is_recheck) {
+                // eligible for recheck
+                await octokit.issues.addLabels({
+                    owner, repo, issue_number,
+                    labels: ['Issuebot: Pending Recheck']
+                })
+            }
+
+            if (is_recheck) {
+                if (!want_close && issue.state === 'closed') {
+                    // here we reopen it
+
+                    await octokit.issues.update({
+                        owner, repo, issue_number,
+                        state: 'open'
+                    })
+                }
+            }
+
             core.setOutput('prefilter_triggered', [...triggered].join('\n'))
+        } else {
+            // nothing is triggered
+            if (is_recheck) {
+                if (issue.state === 'closed') {
+                    // here we reopen it
+
+                    await octokit.issues.update({
+                        owner, repo, issue_number,
+                        state: 'open'
+                    })
+
+                    // remove pending recheck label
+                    await octokit.issues.removeLabel({
+                        owner, repo, issue_number,
+                        name: 'Issuebot: Pending Recheck'
+                    })
+                }
+
+
+                // remove comments
+                if (old_comment_id > 0) {
+                    await octokit.issues.deleteComment({
+                        owner, repo, comment_id: old_comment_id
+                    })
+                }
+            }
+
         }
 
     } catch (error) {
@@ -1567,7 +1648,7 @@ exports.Octokit = Octokit;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
-var isPlainObject = __nccwpck_require__(558);
+var isPlainObject = __nccwpck_require__(287);
 var universalUserAgent = __nccwpck_require__(429);
 
 function lowercaseKeys(object) {
@@ -1953,52 +2034,6 @@ const endpoint = withDefaults(null, DEFAULTS);
 
 exports.endpoint = endpoint;
 //# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
-/***/ 558:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-
-/*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-function isObject(o) {
-  return Object.prototype.toString.call(o) === '[object Object]';
-}
-
-function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (ctor === undefined) return true;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
-  }
-
-  // Most likely a plain Object
-  return true;
-}
-
-exports.isPlainObject = isPlainObject;
 
 
 /***/ }),
@@ -3500,7 +3535,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var endpoint = __nccwpck_require__(440);
 var universalUserAgent = __nccwpck_require__(429);
-var isPlainObject = __nccwpck_require__(62);
+var isPlainObject = __nccwpck_require__(287);
 var nodeFetch = _interopDefault(__nccwpck_require__(467));
 var requestError = __nccwpck_require__(537);
 
@@ -3640,52 +3675,6 @@ const request = withDefaults(endpoint.endpoint, {
 
 exports.request = request;
 //# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
-/***/ 62:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-
-/*!
- * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
- *
- * Copyright (c) 2014-2017, Jon Schlinkert.
- * Released under the MIT License.
- */
-
-function isObject(o) {
-  return Object.prototype.toString.call(o) === '[object Object]';
-}
-
-function isPlainObject(o) {
-  var ctor,prot;
-
-  if (isObject(o) === false) return false;
-
-  // If has modified constructor
-  ctor = o.constructor;
-  if (ctor === undefined) return true;
-
-  // If has modified prototype
-  prot = ctor.prototype;
-  if (isObject(prot) === false) return false;
-
-  // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty('isPrototypeOf') === false) {
-    return false;
-  }
-
-  // Most likely a plain Object
-  return true;
-}
-
-exports.isPlainObject = isPlainObject;
 
 
 /***/ }),
@@ -3891,6 +3880,52 @@ class Deprecation extends Error {
 }
 
 exports.Deprecation = Deprecation;
+
+
+/***/ }),
+
+/***/ 287:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+/*!
+ * is-plain-object <https://github.com/jonschlinkert/is-plain-object>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+function isObject(o) {
+  return Object.prototype.toString.call(o) === '[object Object]';
+}
+
+function isPlainObject(o) {
+  var ctor,prot;
+
+  if (isObject(o) === false) return false;
+
+  // If has modified constructor
+  ctor = o.constructor;
+  if (ctor === undefined) return true;
+
+  // If has modified prototype
+  prot = ctor.prototype;
+  if (isObject(prot) === false) return false;
+
+  // If constructor does not have an Object-specific method
+  if (prot.hasOwnProperty('isPrototypeOf') === false) {
+    return false;
+  }
+
+  // Most likely a plain Object
+  return true;
+}
+
+exports.isPlainObject = isPlainObject;
 
 
 /***/ }),
@@ -5947,6 +5982,48 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 796:
+/***/ ((module) => {
+
+const keywords = [
+    /new feature/i,
+    /feat/i,
+    /新功能/,
+    /建议/,
+    /提议/,
+    /希望/,
+    /能否支持/,
+    /可否支持/,
+]
+
+module.exports = function moveFeatureRequest(issue) {
+    const title = issue.title
+
+    if (Array.isArray(issue.labels) && issue.labels.some(n => n.name === 'feature request')) {
+        return {
+            hit: true,
+            bail: true
+        }
+    }
+
+    for (const k of keywords) {
+        if (k.test(title)) {
+            return {
+                hit: true,
+                bail: true,
+                want_tag: 'feature request'
+            }
+        }
+    }
+
+    return {
+        hit: false
+    }
+}
+
+
+/***/ }),
+
 /***/ 271:
 /***/ ((module) => {
 
@@ -5983,9 +6060,9 @@ module.exports = function checkCheckbox(issue) {
         if (not_ticked) problem.push(PROBLEM.not_ticked)
         return {
             hit: true,
-            break: false,
+            bail: false,
             want_close: true,
-            want_lock: true,
+            want_lock: false,
             problem,
         }
     } else {
@@ -6041,7 +6118,7 @@ module.exports = function checkRequiredFields(issue) {
         }
         return {
             hit: true,
-            break: false,
+            bail: false,
             problem,
             want_close: required,
             want_tag: 'need more info'
@@ -6050,46 +6127,6 @@ module.exports = function checkRequiredFields(issue) {
         return {
             hit: false
         }
-    }
-}
-
-
-/***/ }),
-
-/***/ 2:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-const core = __nccwpck_require__(186)
-
-const keywords = [
-    /new feature/i,
-    /feat/i,
-    /新功能/,
-    /建议/,
-    /提议/,
-    /希望/,
-    /能否支持/,
-    /可否支持/,
-]
-
-module.exports = function moveFeatureRequest(issue) {
-    const title = issue.title
-    for (const k of keywords) {
-        if (k.test(title)) {
-            const link = core.getInput('discussion_link_for_feature_request')
-            return {
-                hit: true,
-                break: true,
-                problem: `这是一个新功能需求，请在 [对应版块](${link}) 提出。此处仅处理程序运行中出现的问题。`,
-                want_close: true,
-                want_lock: true,
-                want_tag: 'enhancement'
-            }
-        }
-    } 
-
-    return {
-        hit: false
     }
 }
 

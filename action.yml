@@ -13,6 +13,10 @@ inputs:
     description: 'The number of issue this action is handling'
     required: true
     default: ${{ github.event.issue.number }}
+  event:
+    description: 'The event that trigger this prefilter set'
+    required: true
+    default: ${{ github.event.action }}
   guide_link:
     description: 'The link to guide'
     required: false
