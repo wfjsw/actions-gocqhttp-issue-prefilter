@@ -38,7 +38,7 @@ async function run() {
             return
         }
 
-        let is_recheck = false, old_comment_id = 0
+        let is_recheck = false, old_comment_id = 0, old_comment_body = ''
 
         if (event === 'edited') {
             if (!Array.isArray(issue.labels)) return
@@ -59,7 +59,10 @@ async function run() {
             })
 
             const old_comment = comments.find(n => n.body.startsWith('<!-- Issuebot Comment -->'))
-            if (old_comment) old_comment_id = old_comment.id
+            if (old_comment) {
+                old_comment_id = old_comment.id
+                old_comment_body = old_comment.body
+            }
         }
 
         let want_close = false, want_lock = false, want_tag = new Set(), problems = new Set(), triggered = new Set()
@@ -99,7 +102,7 @@ async function run() {
                     await octokit.issues.createComment({
                         owner, repo, issue_number, body
                     })
-                } else {
+                } else if (body !== old_comment_body) {
                     await octokit.issues.updateComment({
                         owner, repo, issue_number,
                         comment_id: old_comment_id,
@@ -6001,8 +6004,7 @@ module.exports = function moveFeatureRequest(issue) {
 
     if (Array.isArray(issue.labels) && issue.labels.some(n => n.name === 'feature request')) {
         return {
-            hit: true,
-            bail: true
+            hit: false
         }
     }
 
@@ -6041,6 +6043,8 @@ const PROBLEM = {
 }
 
 module.exports = function checkCheckbox(issue) {
+    if (!issue.labels.some(n => n.name === 'bug?')) return { hit: false }
+
     const body = issue.body
     let missing = false, not_ticked = false
     for (const cb of checkboxes) {
@@ -6049,7 +6053,7 @@ module.exports = function checkCheckbox(issue) {
             const ticked = matches[1]
             if (ticked !== 'x') {
                 not_ticked = true
-            } 
+            }
         } else {
             missing = true
         }
@@ -6100,6 +6104,7 @@ const filters = [
 ]
 
 module.exports = function checkRequiredFields(issue) {
+    if (!issue.labels.some(n => n.name === 'bug?')) return { hit: false }
     const body = issue.body
     const hits = []
     for (const f of filters) {

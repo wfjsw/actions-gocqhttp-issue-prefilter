@@ -14,8 +14,7 @@ module.exports = function moveFeatureRequest(issue) {
 
     if (Array.isArray(issue.labels) && issue.labels.some(n => n.name === 'feature request')) {
         return {
-            hit: true,
-            bail: true
+            hit: false
         }
     }
 

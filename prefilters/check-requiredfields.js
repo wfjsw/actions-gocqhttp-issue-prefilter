@@ -19,6 +19,7 @@ const filters = [
 ]
 
 module.exports = function checkRequiredFields(issue) {
+    if (!issue.labels.some(n => n.name === 'bug?')) return { hit: false }
     const body = issue.body
     const hits = []
     for (const f of filters) {

@@ -12,6 +12,8 @@ const PROBLEM = {
 }
 
 module.exports = function checkCheckbox(issue) {
+    if (!issue.labels.some(n => n.name === 'bug?')) return { hit: false }
+
     const body = issue.body
     let missing = false, not_ticked = false
     for (const cb of checkboxes) {
@@ -20,7 +22,7 @@ module.exports = function checkCheckbox(issue) {
             const ticked = matches[1]
             if (ticked !== 'x') {
                 not_ticked = true
-            } 
+            }
         } else {
             missing = true
         }
