@@ -7,7 +7,7 @@ const filters = [
             /^使用协议(?::|：)\s?.{2,}/m,
         ],
         required: true,
-        description: '您的问题中缺少必要的环境信息。环境信息对于 Bug 调试非常重要，缺少这些信息将极大提高调试难度。请重新创建 Issue 并包含所有必需的环境信息。'
+        description: '您的问题中缺少必要的环境信息。环境信息对于 Bug 调试非常重要，缺少这些信息将极大提高调试难度。请修改该 Issue 并包含所有必需的环境信息。（特别注意 go-cqhttp 版本部分）'
     },
     {
         expressions: [
