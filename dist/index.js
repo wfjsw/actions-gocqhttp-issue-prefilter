@@ -8612,7 +8612,7 @@ async function run() {
 
         core.debug(util.inspect({ token, repo, issue_number }))
 
-        const { data: issue } = await octokit.issues.get({
+        const { data: issue } = await octokit.rest.issues.get({
             owner,
             repo,
             issue_number
@@ -8635,7 +8635,7 @@ async function run() {
         }
 
         if (is_recheck) {
-            const { data: comments } = await octokit.issues.listComments({
+            const { data: comments } = await octokit.rest.issues.listComments({
                 owner, repo, issue_number,
                 page: 1,
                 per_page: 10,
@@ -8684,11 +8684,11 @@ async function run() {
                 const guide_link = core.getInput('guide_link')
                 const body = `<!-- Issuebot Comment --> 我们在您的 Issue 中发现了如下问题：\n\n${[...problems].map(n => `- ${n}`).join('\n')}\n\n${want_close ? `因此您的 Issue 已被关闭${want_lock ? '并锁定' : ''}。请${guide_link ? `参照 [相关教程](${guide_link}) ` : '自行'}${want_lock ? '修复上述问题后重新创建新 Issue。' : '按照上述要求对 Issue 进行修改。'}` : `请${guide_link ? `参照 [相关教程](${guide_link}) ` : '自行'}按照上述要求对 Issue 进行修改。`}`
                 if (old_comment_id === 0) {
-                    await octokit.issues.createComment({
+                    await octokit.rest.issues.createComment({
                         owner, repo, issue_number, body
                     })
                 } else if (body !== old_comment_body) {
-                    await octokit.issues.updateComment({
+                    await octokit.rest.issues.updateComment({
                         owner, repo, issue_number,
                         comment_id: old_comment_id,
                         body
@@ -8697,21 +8697,21 @@ async function run() {
             }
 
             if (want_tag.size > 0) {
-                await octokit.issues.addLabels({
+                await octokit.rest.issues.addLabels({
                     owner, repo, issue_number,
                     labels: [...want_tag]
                 })
             }
 
             if (want_close && issue.state === 'open') {
-                await octokit.issues.update({
+                await octokit.rest.issues.update({
                     owner, repo, issue_number,
                     state: 'closed'
                 })
             }
 
             if (want_lock && !issue.locked) {
-                await octokit.issues.lock({
+                await octokit.rest.issues.lock({
                     owner, repo, issue_number,
                     lock_reason: 'off-topic'
                 })
@@ -8719,7 +8719,7 @@ async function run() {
 
             if (want_close && !want_lock && !is_recheck) {
                 // eligible for recheck
-                await octokit.issues.addLabels({
+                await octokit.rest.issues.addLabels({
                     owner, repo, issue_number,
                     labels: ['Issuebot: Pending Recheck']
                 })
@@ -8729,7 +8729,7 @@ async function run() {
                 if (!want_close && issue.state === 'closed') {
                     // here we reopen it
 
-                    await octokit.issues.update({
+                    await octokit.rest.issues.update({
                         owner, repo, issue_number,
                         state: 'open'
                     })
@@ -8743,13 +8743,13 @@ async function run() {
                 if (issue.state === 'closed') {
                     // here we reopen it
 
-                    await octokit.issues.update({
+                    await octokit.rest.issues.update({
                         owner, repo, issue_number,
                         state: 'open'
                     })
 
                     // remove pending recheck label
-                    await octokit.issues.removeLabel({
+                    await octokit.rest.issues.removeLabel({
                         owner, repo, issue_number,
                         name: 'Issuebot: Pending Recheck'
                     })
@@ -8758,7 +8758,7 @@ async function run() {
 
                 // remove comments
                 if (old_comment_id > 0) {
-                    await octokit.issues.deleteComment({
+                    await octokit.rest.issues.deleteComment({
                         owner, repo, comment_id: old_comment_id
                     })
                 }
